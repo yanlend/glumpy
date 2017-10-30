@@ -1,8 +1,34 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All rights reserved.
-# Distributed under the terms of the new BSD License.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
+"""
+A Shader is a user-defined program designed to run on some stage of a
+graphics processor. Its purpose is to execute one of the programmable stages of
+the rendering pipeline.
+
+Read more on shaders on `OpenGL Wiki <https://www.opengl.org/wiki/Shader>`_
+
+**Example usage**
+
+  .. code:: python
+
+     vertex = '''
+         attribute vec2 position;
+         void main (void)
+         {
+             gl_Position = vec4(0.85*position, 0.0, 1.0);
+         } '''
+     fragment = '''
+         void main(void)
+         {
+             gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+         } '''
+
+     quad = gloo.Program(vertex, fragment, count=4)
+     quad['position'] = [(-1,-1), (-1,+1), (+1,-1), (+1,+1)]
+"""
 import re
 import os.path
 import numpy as np
@@ -17,7 +43,23 @@ from . parser import (remove_comments, preprocess,
 
 # ------------------------------------------------------------ Shader class ---
 class Shader(GLObject):
-    """Abstract shader class."""
+    """
+    Abstract shader class.
+
+    :param gl.GLEnum target:
+
+       * gl.GL_VERTEX_SHADER
+       * gl.GL_FRAGMENT_SHADER
+       * gl.GL_GEOMETRY_SHADER
+
+    :param str code: Shader code or a filename containing shader code
+
+    .. note::
+    
+       If the shader code is actually a filename, the filename must be prefixed
+       with ``file:``. Note that you can also get shader code from the library
+       module.
+    """
 
     _gtypes = {
         'float':       gl.GL_FLOAT,
@@ -41,20 +83,15 @@ class Shader(GLObject):
     }
 
 
-    def __init__(self, target, code):
+    def __init__(self, target, code, version="120"):
         """
-        Initialize the shader and get code if possible.
-
-        Parameters
-        ----------
-
-        code: str
-            code can be a filename or the actual code
+        Initialize the shader.
         """
 
         GLObject.__init__(self)
         self._target = target
         self._snippets = {}
+        self._version = version
 
         if os.path.isfile(code):
             with open(code, 'rt') as file:
@@ -114,12 +151,12 @@ class Shader(GLObject):
 
                 # If the last snippet name endswith "!" this means to call
                 # the snippet with given arguments and not the ones stored.
-                # If S = A(B(C)):
-                #   S("t") -> A(B(C("t")))
-                #   S!("t") -> A("t")
-                isolated = False
+                # If S = A(B(C))("t"):
+                #   <S>     -> A(B(C("t")))
+                #   <S!>(t) -> A("t")
+                override = False
                 if subhook[-1] == "!":
-                    isolated = True
+                    override = True
                     subhook = subhook[:-1]
 
                 # Do we have a class alias ? We don't return it yet since we
@@ -129,7 +166,7 @@ class Shader(GLObject):
                 # If subhook is a variable (uniform/attribute/varying)
                 if subhook in s.globals:
                     return s.globals[subhook]
-                return s.mangled_call(subhook, match.group("args"), isolated=isolated)
+                return s.mangled_call(subhook, match.group("args"), override=override)
 
             # If subhook is a variable (uniform/attribute/varying)
             if subhook in snippet.globals:
@@ -194,7 +231,7 @@ class Shader(GLObject):
             raise RuntimeError(error)
 
         # Set shader version
-        code = "#version 120\n" + self.code
+        code = ("#version %s\n" % self._version) + self.code
         gl.glShaderSource(self._handle, code)
 
         # Actual compilation
@@ -307,8 +344,8 @@ class Shader(GLObject):
 class VertexShader(Shader):
     """ Vertex shader class """
 
-    def __init__(self, code=None):
-        Shader.__init__(self, gl.GL_VERTEX_SHADER, code)
+    def __init__(self, code=None, version="120"):
+        Shader.__init__(self, gl.GL_VERTEX_SHADER, code, version)
 
     @property
     def code(self):
@@ -322,13 +359,13 @@ class VertexShader(Shader):
 
 
 
-# ---------------------------------------------------- FragmentShader class ---
+
 class FragmentShader(Shader):
     """ Fragment shader class """
 
 
-    def __init__(self, code=None):
-        Shader.__init__(self, gl.GL_FRAGMENT_SHADER, code)
+    def __init__(self, code=None, version="120"):
+        Shader.__init__(self, gl.GL_FRAGMENT_SHADER, code, version)
 
     @property
     def code(self):
@@ -341,13 +378,30 @@ class FragmentShader(Shader):
         return "Fragment shader %d (%s)" % (self._id, self._source)
 
 
-# ---------------------------------------------------- GeometryShader class ---
+
 class GeometryShader(Shader):
-    """ Geometry shader class """
+    """ Geometry shader class.
+
+        :param str code: Shader code or a filename containing shader code
+        :param int vertices_out: Number of output vertices
+        :param gl.GLEnum input_type:
+
+           * GL_POINTS
+           * GL_LINES​, GL_LINE_STRIP​, GL_LINE_LIST
+           * GL_LINES_ADJACENCY​, GL_LINE_STRIP_ADJACENCY
+           * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
+           * GL_TRIANGLES_ADJACENCY​, GL_TRIANGLE_STRIP_ADJACENCY
+
+        :param gl.GLEnum output_type:
+
+           * GL_POINTS, GL_LINES​, GL_LINE_STRIP
+           * GL_TRIANGLES​, GL_TRIANGLE_STRIP​, GL_TRIANGLE_FAN
+    """
 
 
-    def __init__(self, code=None, vertices_out=0, input_type=None, output_type=None):
-        Shader.__init__(self, gl.GL_GEOMETRY_SHADER_EXT, code)
+    def __init__(self, code=None,
+                 vertices_out=0, input_type=None, output_type=None, version="120"):
+        Shader.__init__(self, gl.GL_GEOMETRY_SHADER_EXT, code, version)
 
         self._vertices_out = vertices_out
 

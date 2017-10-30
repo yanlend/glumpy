@@ -1,8 +1,6 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Vispy Development Team. All Rights Reserved.
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 from glumpy import app, gl, glm, gloo
@@ -161,8 +159,8 @@ P[:, :] = species['Coral']
 UV = np.zeros((h, w, 4), dtype=np.float32)
 UV[:, :, 0] = 1.0
 r = 32
-UV[h/2-r:h/2+r,w/2-r:w/2+r,0] = 0.50
-UV[h/2-r:h/2+r,w/2-r:w/2+r,1] = 0.25
+UV[h//2-r:h//2+r,w//2-r:w//2+r,0] = 0.50
+UV[h//2-r:h//2+r,w//2-r:w//2+r,1] = 0.25
 UV += np.random.uniform(0.00, 0.01, (h, w, 4))
 UV[:,:,2] = UV[:,:,0]
 UV[:,:,3] = UV[:,:,1]

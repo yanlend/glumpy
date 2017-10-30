@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 from glumpy import gloo, data
@@ -403,7 +402,7 @@ def sphere(radius=1.0, slices=32, stacks=32):
     vertices["position"][:,0] = np.sin(theta1) * np.sin(theta2) * radius
     vertices["normal"] = vertices["position"]
     vertices["texcoord"][:,0] = np.tile(np.linspace(0, 1, slices, endpoint=True), stacks)
-    vertices["texcoord"][:,1] = np.repeat(np.linspace(0, 1, stacks, endpoint=True), slices)
+    vertices["texcoord"][:,1] = np.repeat(np.linspace(1, 0, stacks, endpoint=True), slices)
 
     indices = []
     for i in range(stacks-1):

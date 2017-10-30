@@ -1,13 +1,11 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All Rights Reserved.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 # Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import sys
 import math
 import numpy as np
-from  glumpy import app, gl, glm, gloo, shaders
+from  glumpy import app, gl, glm, gloo, library
 
 
 vertex = """
@@ -61,7 +59,7 @@ def compute_grid():
     stop  = xmax - math.fmod(xmax, t1)
     if abs(stop-xmax) < epsilon: stop -= t1
     count = (stop-start)/t1+1
-    I = np.zeros(count+2)
+    I = np.zeros(int(count+2))
     I[0], I[-1] = xmin, xmax
     I[1:-1] = np.linspace(start, stop, count, endpoint=True)
     Z[..., 0] = I[find_closest_direct(I, start=xmin, end=xmax, count=n)]
@@ -72,7 +70,7 @@ def compute_grid():
     stop  = xmax - math.fmod(xmax, t2)
     if abs(stop-xmax) < epsilon: stop -= t2
     count = (stop-start)/t2+1
-    I = np.zeros(count+2)
+    I = np.zeros(int(count+2))
     I[0], I[-1] = xmin, xmax
     I[1:-1] = np.linspace(start, stop, count, endpoint=True)
     Z[..., 1] = I[find_closest_direct(I, start=xmin, end=xmax, count=n)]
@@ -85,7 +83,7 @@ def compute_grid():
     stop  = ymax - math.fmod(ymax, t1)
     if abs(stop-ymax) < epsilon: stop -= t1
     count = (stop-start)/t1+1
-    I = np.zeros(count+2)
+    I = np.zeros(int(count+2))
     I[0], I[-1] = ymin, ymax
     I[1:-1] = np.linspace(start, stop, count, endpoint=True)
     Z[..., 2] = I[find_closest_direct(I, start=ymin, end=ymax, count=n)]
@@ -96,7 +94,7 @@ def compute_grid():
     stop  = ymax - math.fmod(ymax, t2)
     if abs(stop-ymax) < epsilon: stop -= t2
     count = (stop-start)/t2+1
-    I = np.zeros(count+2)
+    I = np.zeros(int(count+2))
     I[0], I[-1] = ymin, ymax
     I[1:-1] = np.linspace(start, stop, count, endpoint=True)
     Z[..., 3] = I[find_closest_direct(I, start=ymin, end=ymax, count=n)]
@@ -133,12 +131,12 @@ vertices[:,:]["col"]      = C.reshape(rows,cols,1)
 
 indices = np.zeros( (rows,cols, 6), dtype=np.uint32 )
 indices[:,:] = 0,1,2,0,2,3
-indices[:,:] += 4*np.arange(rows*cols).reshape(rows,cols,1)
+indices[:,:] += 4*np.arange(rows*cols,dtype=np.uint32).reshape(rows,cols,1)
 indices = indices.ravel()
 indices = indices.view(gloo.IndexBuffer)
 
 
-program = gloo.Program(vertex, shaders.get_code("irregular-grid.frag"))
+program = gloo.Program(vertex, library.get("misc/irregular-grid.frag"))
 program.bind(vertices)
 
 program["rows"] = rows

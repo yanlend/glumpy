@@ -1,7 +1,5 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All Rights Reserved.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 # Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 """
@@ -19,7 +17,7 @@ attribute vec2 start, end;
 attribute float lifetime;
 varying float v_lifetime;
 void main () {
-    gl_Position.xy = start + (time * end) + center;
+    gl_Position = vec4(start + (time * end) + center, 0.0, 1.0);
     gl_Position.y -= 1.0 * time * time;
     v_lifetime = clamp(1.0 - (time / lifetime), 0.0, 1.0);
     gl_PointSize = (v_lifetime * v_lifetime) * 30.0;

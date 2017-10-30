@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 
@@ -41,7 +40,7 @@ def compact(vertices, indices, tolerance=1e-3):
     I_ = indices.copy().ravel()
     for i in range(len(indices)):
         I_[i] = RI[indices[i]]
-    I_ = I_.reshape(len(indices)/3,3)
+    I_ = I_.reshape(len(indices)//3,3)
 
     # Return reduced vertices set, transalted indices and mapping that allows
     # to go from U to V

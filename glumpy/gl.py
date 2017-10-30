@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import ctypes
 from glumpy.log import log
@@ -18,6 +17,7 @@ FormatHandler( 'glumpy',
                'OpenGL.arrays.numpymodule.NumpyHandler',[
                    'glumpy.gloo.buffer.VertexBuffer',
                    'glumpy.gloo.buffer.IndexBuffer',
+                   'glumpy.gloo.atlas.Atlas',
                    'glumpy.gloo.texture.Texture2D',
                    'glumpy.gloo.texture.Texture1D',
                    'glumpy.gloo.texture.FloatTexture2D',

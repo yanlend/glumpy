@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 """
 Antigrain Geometry Fast Path Collection
@@ -167,7 +166,7 @@ class AggFastPathCollection(Collection):
         V[:,-1] = V[:,-2]
         V = V.ravel()
         V = np.repeat(V,2,axis=0)
-        V['id'] = np.tile([1,-1],len(V)/2)
+        V['id'] = np.tile([1,-1],len(V)//2)
         if closed:
             V = V.reshape(itemcount,2*(itemsize+3))
         else:

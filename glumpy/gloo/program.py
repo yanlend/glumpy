@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All rights reserved.
-# Distributed under the terms of the new BSD License.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import re
 import numpy as np
@@ -11,6 +10,7 @@ from glumpy.log import log
 from glumpy import library
 from . snippet import Snippet
 from . globject import GLObject
+from . array import VertexArray
 from . buffer import VertexBuffer, IndexBuffer
 from . shader import VertexShader, FragmentShader, GeometryShader
 from . variable import gl_typeinfo, Uniform, Attribute
@@ -20,40 +20,77 @@ from . variable import gl_typeinfo, Uniform, Attribute
 # ----------------------------------------------------------- Program class ---
 class Program(GLObject):
     """
-    A program is an object to which shaders can be attached and linked to create
-    the program.
+    A Program is an object to which shaders can be attached and linked to create
+    a shader program.
+
+    :param str|None vertex:
+      Vertex shader object (as code or filename)
+    :param str|None fragment:
+      Fragment shader object (as code or filename)
+    :param str|None geometry:
+      Geometry shader object (as code or filename)
+    :param int count:
+      Optional. Number of vertices this program will use. This can be
+      specified to initialize a VertexBuffer during program initialization.
+    :param str version:
+      GLSL version to use
+    .. warning::
+
+       If a shader is given as a string and contains a ``{``, glumpy considers
+       the string to be actual code. Else, glumpy will try to locate the file
+       in the library (``glumpy/library``).
+
+    The actual compilation of a program is a complex operation since include
+    msut be resolved and hooks must be inserted at the proper place.
     """
 
     # ---------------------------------
-    def __init__(self, verts=None, frags=None, geoms=None, count=0):
+    def __init__(self, vertex=None, fragment=None, geometry=None, count=0, version="120"):
         """
-        Initialize the program and register shaders to be linked.
-
-        Parameters
-        ----------
-
-        verts : str, VertexShader, or list
-            The vertex shader(s) to be used by this program
-
-        frags : str, FragmentShader, or list
-            The fragment shader(s) to be used by this program
-
-        geoms : str, GeometryShader, or list
-            The geometry shader(s) to be used by this program
-
-        count : int (optional)
-            Number of vertices this program will use. This can be given to
-            initialize a VertexBuffer during Program initialization.
+        Initialize the program and optionnaly buffer.
         """
 
         GLObject.__init__(self)
         self._count = count
         self._buffer = None
+        self._vertex =  None
+        self._fragment = None
+        self._geometry = None
+        self._version = version
+        
+        if vertex is not None:
+            if isinstance(vertex, str):
+                if not '{' in vertex:
+                    vertex = library.get(vertex)
+                self._vertex = VertexShader(vertex, version=version)
+            elif isinstance(vertex,VertexShader):
+                self._vertex = vertex
+                self._vertex._version = version
+            else:
+                log.error("vertex must be a string or a VertexShader")
 
-        # Make sure shaders are shaders
-        self._vertex   = self._merge(verts, VertexShader)
-        self._fragment = self._merge(frags, FragmentShader)
-        self._geometry = self._merge(geoms, GeometryShader)
+        if fragment is not None:
+            if isinstance(fragment, str):
+                if not '{' in fragment:
+                    fragment = library.get(fragment)
+                self._fragment = FragmentShader(fragment, version=version)
+            elif isinstance(fragment, FragmentShader, version=version):
+                self._fragment = fragment
+                self._fragment._version = version
+            else:
+                log.error("fragment must be a string or a FragmentShader")
+
+        if geometry is not None:
+            if isinstance(geometry, str):
+                if not '{' in geometry:
+                    geometry = library.get(geometry)
+                self._geometry = GeometryShader(geometry, version=version)
+            elif isinstance(geometry, GeometryShader):
+                self._geometry = geometry
+                self._geometry._version = version
+            else:
+                log.error("geometry must be a string or a GeometryShader")
+                
 
         self._uniforms = {}
         self._attributes = {}
@@ -72,34 +109,6 @@ class Program(GLObject):
             self.bind(self._buffer)
 
 
-    def _merge(self, shaders, shader_class):
-        """
-        Merge a list of shaders
-        """
-
-        if isinstance(shaders, shader_class):
-            return shaders
-        elif isinstance(shaders, str):
-            return shader_class(shaders if '{' in shaders else library.get(shaders))
-        elif shaders is None:
-            return None
-        elif isinstance(shaders, (tuple, list)):
-            pass
-        else:
-            raise ValueError('shaders must be str, Shader or list')
-
-        # Merge shader list
-        code = ''
-        for shader in shaders:
-            if isinstance(shader, str):
-                code += library.get(shader)
-            elif isinstance(shader, shader_class):
-                code += shader.code
-            else:
-                raise ValueError('Cannot make a Shader out of %r.' % type(shader))
-        return shader_class(code)
-
-
     def __len__(self):
         if self._buffer is not None:
             return len(self._buffer)
@@ -109,19 +118,44 @@ class Program(GLObject):
 
     @property
     def vertex(self):
+        """ Vertex shader object """
         return self._vertex
 
 
     @property
     def fragment(self):
+        """ Fragment shader object """
         return self._fragment
+
+    
+    @property
+    def geometry(self):
+        """ Geometry shader object """
+        return self._geometry
 
 
     @property
     def hooks(self):
-        """ Known hooks """
+        """
+        Hook names collected from vertex, fragment and geometry shaders.
 
-        return tuple(self._vert_hooks.keys())  + tuple(self._frag_hooks.keys())
+
+        Hooks are placeholder in a shader source code where shader snippet can
+        be inserted.
+
+        Example:
+
+        .. code:: C
+
+           attribute vec3 position;
+           void main () {
+               gl_Position = <transform>(position); # "transform" is a hook
+           }
+        """
+
+        return tuple(self._vert_hooks.keys()) + \
+               tuple(self._frag_hooks.keys()) + \
+               tuple(self._geom_hooks.keys())
 
 
     def _setup(self):
@@ -215,19 +249,17 @@ class Program(GLObject):
 
         self._vert_hooks = {}
         self._frag_hooks = {}
+        self._geom_hooks = {}
 
-        for (hook,subhook) in self._vertex.hooks:
-            self._vert_hooks[hook] = None
-        for (hook,subhook) in self._fragment.hooks:
-            self._frag_hooks[hook] = None
-
-        #shaders = [self._vertex, self._fragment]
-        #if self._geometry is not None:
-        #    shaders.append(self._geometry)
-        #self._hooks = {}
-        #for shader in shaders:
-        #    for (hook,subhook) in shader.hooks:
-        #        self._hooks[hook] = shader, None
+        if self._vertex is not None:
+            for (hook,subhook) in self._vertex.hooks:
+                self._vert_hooks[hook] = None
+        if self._fragment is not None:
+            for (hook,subhook) in self._fragment.hooks:
+                self._frag_hooks[hook] = None
+        if self._geometry is not None:
+            for (hook,subhook) in self._geometry.hooks:
+                self._geom_hooks[hook] = None
 
 
 
@@ -269,12 +301,19 @@ class Program(GLObject):
 
 
     def bind(self, data):
-        """ """
+        """
+        Bind a vertex buffer to the program, matching buffer record names with
+        program attributes.
 
-        if isinstance(data, VertexBuffer):
+        Several buffers can be bound but the size of the different buffers must
+        match.
+        """
+
+        if isinstance(data, (VertexBuffer,VertexArray)):
             for name in data.dtype.names:
                 if name in self._attributes.keys():
                     self._attributes[name].set_data(data.ravel()[name])
+
 
 
     def __setitem__(self, name, data):
@@ -332,10 +371,10 @@ class Program(GLObject):
         else:
             raise IndexError("Unknown item (no corresponding hook, uniform or attribute)")
 
-    def keys(self):
-        """ Uniforme and attribute names """
+    # def keys(self):
+    #     """ Uniforme and attribute names """
 
-        return self._uniforms.keys() + self._attributes.keys()
+    #     return self._uniforms.keys() + self._attributes.keys()
 
 
     def _activate(self):
@@ -348,6 +387,7 @@ class Program(GLObject):
             if uniform.active:
                 uniform.activate()
 
+        # Need fix when dealing with vertex arrays (only need to active the array)
         for attribute in self._attributes.values():
             if attribute.active:
                 attribute.activate()
@@ -360,13 +400,18 @@ class Program(GLObject):
 
         for uniform in self._uniforms.values():
             uniform.deactivate()
+
+        # Need fix when dealing with vertex arrays (only need to active the array)
         for attribute in self._attributes.values():
             attribute.deactivate()
         log.debug("GPU: Deactivating program (id=%d)" % self._id)
 
 
-    def _get_all_uniforms(self):
-        """Extract uniforms from shaders code """
+    @property
+    def all_uniforms(self):
+        """
+        List of all uniform parsed from shaders source (read only).
+        """
 
         uniforms = []
         shaders = [self._vertex, self._fragment]
@@ -377,12 +422,27 @@ class Program(GLObject):
             uniforms.extend(shader.uniforms)
         uniforms = list(set(uniforms))
         return uniforms
-    all_uniforms = property(_get_all_uniforms,
-        doc = """ Program uniforms obtained from shaders code """)
 
 
-    def _get_active_uniforms(self):
-        """ Extract active uniforms from GPU """
+    @property
+    def active_uniforms(self):
+        """
+        List of active uniform requested from GPU (read only).
+
+        .. note:: 
+
+           An inactive uniform is a uniform that has been declared but that is
+           not actually used in the shader.
+
+           Example:
+
+           .. code::
+
+              uniform vec3 color;     # Inactive
+              void main() {
+                  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+              }
+        """
 
         count = gl.glGetProgramiv(self.handle, gl.GL_ACTIVE_UNIFORMS)
 
@@ -406,13 +466,27 @@ class Program(GLObject):
                 uniforms.append((name, gtype))
 
         return uniforms
-    active_uniforms = property(_get_active_uniforms,
-        doc = "Program active uniforms obtained from GPU")
 
 
+    @property
+    def inactive_uniforms(self):
+        """
+        List of inactive uniforms requested from GPU (read only).
 
-    def _get_inactive_uniforms(self):
-        """ Extract inactive uniforms from GPU """
+        .. note:: 
+
+           An inactive uniform is a uniform that has been declared but that is
+           not actually used in the shader.
+
+           Example:
+
+           .. code::
+
+              uniform vec3 color;     # Inactive
+              void main() {
+                  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+              }
+        """
 
         active_uniforms = self.active_uniforms
         inactive_uniforms = self.all_uniforms
@@ -420,25 +494,39 @@ class Program(GLObject):
             if uniform in inactive_uniforms:
                 inactive_uniforms.remove(uniform)
         return inactive_uniforms
-    inactive_uniforms = property(_get_inactive_uniforms,
-        doc = "Program inactive uniforms obtained from GPU")
 
-
-
-    def _get_all_attributes(self):
-        """ Extract attributes from shaders code """
+    @property
+    def all_attributes(self):
+        """
+        List of all attributes parsed from shaders source (read only).
+        """
 
         attributes= []
         attributes.extend(self._vertex.attributes)
         attributes = list(set(attributes))
         return attributes
-    all_attributes = property(_get_all_attributes,
-        doc = "Program attributes obtained from shaders code")
 
 
+    @property
+    def active_attributes(self):
+        """
+        List of active attributes requested from GPU (read only).
 
-    def _get_active_attributes(self):
-        """ Extract active attributes from GPU """
+        .. note:: 
+
+           An inactive attribute is an attribute that has been declared
+           but that is not actually used in the shader.
+
+           Example:
+
+           .. code::
+
+              attribute vec3 normal;    # Inactive
+              attribute vec3 position;  # Active
+              void main() {
+                  gl_Position = vec4(position, 1.0);
+              }
+        """
 
         count = gl.glGetProgramiv(self.handle, gl.GL_ACTIVE_ATTRIBUTES)
         attributes = []
@@ -462,14 +550,30 @@ class Program(GLObject):
                         attributes.append((name, gtype))
             else:
                 attributes.append((name, gtype))
+
         return attributes
-    active_attributes = property(_get_active_attributes,
-        doc = "Program active attributes obtained from GPU")
 
 
+    @property
+    def inactive_attributes(self):
+        """
+        List of inactive attributes requested from GPU (read only).
 
-    def _get_inactive_attributes(self):
-        """ Extract inactive attributes from GPU """
+        .. note:: 
+
+           An inactive attribute is an attribute that has been declared
+           but that is not actually used in the shader.
+
+           Example:
+
+           .. code::
+
+              attribute vec3 normal;    # Inactive
+              attribute vec3 position;  # Active
+              void main() {
+                  gl_Position = vec4(position, 1.0);
+              }
+        """
 
         active_attributes = self.active_attributes
         inactive_attributes = self.all_attributes
@@ -477,25 +581,23 @@ class Program(GLObject):
             if attribute in inactive_attributes:
                 inactive_attributes.remove(attribute)
         return inactive_attributes
-    inactive_attributes = property(_get_inactive_attributes,
-        doc = "Program inactive attributes obtained from GPU")
-
 
 
     def draw(self, mode = gl.GL_TRIANGLES, indices=None): #first=0, count=None):
-        """ Draw the attribute arrays in the specified mode.
+        """ Draw using the specified mode & indices.
 
-        Parameters
-        ----------
-        mode : GL_ENUM
-            GL_POINTS, GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP,
-            GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN
+        :param gl.GLEnum mode: 
+          One of
+            * GL_POINTS
+            * GL_LINES
+            * GL_LINE_STRIP
+            * GL_LINE_LOOP,
+            * GL_TRIANGLES
+            * GL_TRIANGLE_STRIP
+            * GL_TRIANGLE_FAN
 
-        first : int
-            The starting vertex index in the vertex array. Default 0.
-
-        count : int
-            The number of vertices to draw. Default all.
+        :param IndexBuffer|None indices:
+            Vertex indices to be drawn. If none given, everything is drawn.
         """
 
         self.activate()

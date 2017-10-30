@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 """
 All default parameters and objects.
@@ -149,7 +148,7 @@ def double_buffer():
 
 
 # -------------------------------------------------------------- depth_size ---
-__depth_size__ = 16
+__depth_size__ = 24
 
 def get_default_depth_size():
     """ Default depth size """

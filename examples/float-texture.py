@@ -1,8 +1,6 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2015, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 # This example is used to check if float texture are working (depending on GPU):
 # Only one color on screen: texture float are not working
@@ -43,6 +41,6 @@ program = gloo.Program(vertex, fragment, count=4)
 program['position'] = [(-1,-1), (-1,+1), (+1,-1), (+1,+1)]
 program['texcoord'] = [( 0, 1), ( 0, 0), ( 1, 1), ( 1, 0)]
 T = np.linspace(0/256.0, 1/256.0, 32*32)
-program['texture'] = T.astype(np.float32).reshape(32,32)
+program['texture'] = T.astype(np.float32).reshape(32,32).view(gloo.TextureFloat2D)
 
 app.run()

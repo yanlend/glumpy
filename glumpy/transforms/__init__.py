@@ -1,16 +1,17 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All rights reserved.
-# Distributed under the terms of the new BSD License.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
-from .panzoom import PanZoom
-from .viewport import Viewport
-from .trackball import Trackball
-from .xyz import X,Y,Z
-from .rotate import Rotate
-from .position import Position
-from .translate import Translate
-from .transform import Transform
+from . panzoom import PanZoom
+from . viewport import Viewport
+from . arcball import Arcball
+from . trackball import Trackball
+from . xyz import X,Y,Z
+from . rotate import Rotate
+from . position import Position
+from . geoposition import GeoPosition
+from . translate import Translate
+from . transform import Transform
 
 
 from .albers import Albers
@@ -28,6 +29,7 @@ from .pvm_projection import PVMProjection
 # from perpective_projection import PerspectiveProjection
 from .orthographic_projection import OrthographicProjection
 
-from .log_scale import LogScale
-from .power_scale import PowerScale
-from .linear_scale import LinearScale
+from . quantitative_scale import QuantitativeScale
+from . log_scale import LogScale
+from . power_scale import PowerScale
+from . linear_scale import LinearScale

@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 from . font import Glyph
 from glumpy.ext import freetype
-from glumpy.ext.sdf import compute_sdf
-
+# Lazy import to avoid problem on readthedocs.org
+# from glumpy.ext.sdf import compute_sdf
 
 
 def bilinear_interpolate(im, x, y):
@@ -79,6 +78,9 @@ class SDFFont(object):
 
     def load_glyph(self, face, charcode):
 
+        # Lazy import to avoid problem on readthedocs.org
+        from glumpy.ext.sdf import compute_sdf
+
         face.set_char_size( self._hires_size*64 )
         face.load_char(charcode, freetype.FT_LOAD_RENDER |
                                  freetype.FT_LOAD_NO_HINTING |
@@ -95,10 +97,10 @@ class SDFFont(object):
 
         # Pad high resolution glyph with a blank border and normalize values
         # between 0 and 1
-        hires_width  = (1+2*self._padding)*width
-        hires_height = (1+2*self._padding)*height
+        hires_width  = int((1+2*self._padding)*width)
+        hires_height = int((1+2*self._padding)*height)
         hires_data = np.zeros( (hires_height,hires_width), np.double)
-        ox,oy = self._padding*width, self._padding*height
+        ox,oy = int(self._padding*width), int(self._padding*height)
         hires_data[oy:oy+height, ox:ox+width] = G/255.0
 
        # Compute distance field at high resolution

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 from . import normals
@@ -53,6 +52,6 @@ def surface(func, umin=0, umax=2*np.pi, ucount=64, urepeat=1.0,
             indices.append(i*(vcount) + j        )
     indices = np.array(indices, dtype=itype)
     vertices["normal"] = normals(vertices["position"],
-                                 indices.reshape(len(indices)/3,3))
+                                 indices.reshape(len(indices)//3,3))
 
     return vertices.view(gloo.VertexBuffer), indices.view(gloo.IndexBuffer)

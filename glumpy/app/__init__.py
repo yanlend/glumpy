@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 """
 """
@@ -20,8 +19,10 @@ from glumpy.app.window import backends
 from . import parser
 from . import configuration
 from . import clock as _clock
+from . clock import Clock
 from . console import Console
 from . viewport import Viewport
+from . window import EventDispatcher
 
 # Default clock
 __clock__ = None
@@ -105,7 +106,7 @@ def use(backend, api=None, major=None, minor=None, profile=None):
 
     if backend not in backends.__backends__:
         log.critical("Unknown backend (%s)" % backend)
-        log.cirtical("Available backends are: %s", str(backends.__backends__))
+        log.critical("Available backends are: %s", str(backends.__backends__))
         sys.exit(0)
 
     # BUG: For some reason, the import module changes the working directory
@@ -189,6 +190,10 @@ class Window(object):
                  (__backend__.name(), config.api,
                   config.major_version, config.minor_version))
 
+        if config.samples > 0:
+            log.info("Using multisampling with %d samples" %
+                     (config.samples))
+
         # Display fps options
         if options.display_fps:
             @window.timer(1.0)
@@ -237,12 +242,17 @@ def __init__(clock=None, framerate=None, backend=None):
     __clock__.set_fps_limit(framerate)
 
     # OpenGL Initialization
-    gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-    gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
-    gl.glEnable(gl.GL_VERTEX_PROGRAM_POINT_SIZE)
-    gl.glEnable(gl.GL_POINT_SPRITE)
-    gl.glEnable(gl.GL_BLEND)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    for window in backend.windows():
+        window.activate()
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
+        gl.glEnable(gl.GL_VERTEX_PROGRAM_POINT_SIZE)
+        try: # This has been removed in 3.2 (it's now on by default)
+            gl.glEnable(gl.GL_POINT_SPRITE)
+        except:
+            pass
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
 
     # Initialize timers for all windows
@@ -253,6 +263,9 @@ def __init__(clock=None, framerate=None, backend=None):
         for i in range(len(window._timer_stack)):
             handler, interval = window._timer_stack[i]
             __clock__.schedule_interval(handler, interval)
+
+        # Activate window
+        window.activate()
 
         # Dispatch init event
         window.dispatch_event('on_init')
@@ -329,8 +342,12 @@ def run(clock=None, framerate=None, interactive=None,
 
         if options.record:
             from .movie import record
-            # Obtain the name of the script that is being run
-            name = os.path.basename(sys.argv[0])
+            try:
+                # Check if output file name given
+                name = sys.argv[2]
+            except:
+                # Obtain the name of the script that is being run
+                name = os.path.basename(sys.argv[0])
             # Replace .py extension with .mp4
             filename=re.sub('.py$', '.mp4', name)
             log.info("Recording movie in '%s'" % filename)

@@ -1,14 +1,68 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier. All rights reserved.
-# Distributed under the terms of the new BSD License.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
+"""
+Variables are entry points in the shader that allow to upload CPU data to
+the GPU. For OpenGL ES 2.0, there are mainly two types: uniforms and
+attributes. The correspondance betwenn GPU and CPU data types is given in the
+table below.
+
+=========== ================== == ================== ==============
+GLSL Type   GLSL/GL Type       #  GL elementary type Numpy type
+=========== ================== == ================== ==============
+float       gl.GL_FLOAT        1  gl.GL_FLOAT        np.float32
+vec2        gl.GL_FLOAT_VEC2   2  gl.GL_FLOAT        np.float32
+vec3        gl.GL_FLOAT_VEC3   3  gl.GL_FLOAT        np.float32
+vec4        gl.GL_FLOAT_VEC4   4  gl.GL_FLOAT        np.float32
+int         gl.GL_INT          1  gl.GL_INT          np.int32
+ivec2       gl.GL_INT_VEC2     2  gl.GL_INT          np.int32
+ivec3       gl.GL_INT_VEC3     3  gl.GL_INT          np.int32
+ivec4       gl.GL_INT_VEC4     4  gl.GL_INT          np.int32
+bool        gl.GL_BOOL         1  gl.GL_BOOL         np.bool
+bvec2       gl.GL_BOOL_VEC2    2  gl.GL_BOOL         np.bool
+bvec3       gl.GL_BOOL_VEC3    3  gl.GL_BOOL         np.bool
+bvec4       gl.GL_BOOL_VEC4    4  gl.GL_BOOL         np.bool
+mat2        gl.GL_FLOAT_MAT2   4  gl.GL_FLOAT        np.float32
+mat3        gl.GL_FLOAT_MAT3   9  gl.GL_FLOAT        np.float32
+mat4        gl.GL_FLOAT_MAT4   16 gl.GL_FLOAT        np.float32
+sampler1D   gl.GL_SAMPLER_1D   1  gl.GL_UNSIGNED_INT np.uint32
+sampler2D   gl.GL_SAMPLER_2D   1  gl.GL_UNSIGNED_INT np.uint32
+samplerCube gl.GL_SAMPLER_CUBE 1  gl.GL_UNSIGNED_INT np.uint32
+=========== ================== == ================== ==============
+
+.. note:: 
+
+   Most of the time, you don't need to directly manipulate such variables
+   since they are created automatically when shader code is parsed.
+
+**Example usage**
+
+  .. code::
+
+     vertex = '''
+         attribute vec3 position;
+         void main (void)
+         {
+             gl_Position = vec4(position, 1.0);
+         } '''
+     fragment = '''
+         uniform vec4 color;
+         void main(void)
+         {
+             gl_FragColor = color;
+         } '''
+     program = gloo.Program(vertex, fragment, count=4)
+     # program["position"] type is Attribute
+     # program["color"] type is Uniform
+"""
 import ctypes
 import numpy as np
 
 from glumpy import gl
 from glumpy.log import log
 from glumpy.gloo.globject import GLObject
+from glumpy.gloo.array import VertexArray
 from glumpy.gloo.buffer import VertexBuffer
 from glumpy.gloo.texture import TextureCube
 from glumpy.gloo.texture import Texture1D, Texture2D
@@ -155,7 +209,7 @@ class Uniform(Variable):
 
 
     def set_data(self, data):
-        """ Set data (no upload) """
+        """ Assign new data to the variable (deferred operation) """
 
         # Textures need special handling
         if self._gtype == gl.GL_SAMPLER_1D:
@@ -172,7 +226,7 @@ class Uniform(Variable):
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(Texture1D)
                 else:
-                    self._data = data.astype(np.uint8).view(Texture1D)
+                    self._data = data.view(Texture1D)
 
         elif self._gtype == gl.GL_SAMPLER_2D:
             if isinstance(data, Texture2D):
@@ -187,7 +241,7 @@ class Uniform(Variable):
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(Texture2D)
                 else:
-                    self._data = data.astype(np.uint8).view(Texture2D)
+                    self._data = data.view(Texture2D)
 
         elif self._gtype == gl.GL_SAMPLER_CUBE:
             if isinstance(data, TextureCube):
@@ -201,7 +255,7 @@ class Uniform(Variable):
                 if data.dtype in [np.float16, np.float32, np.float64]:
                     self._data = data.astype(np.float32).view(TextureCube)
                 else:
-                    self._data = data.astype(np.uint8).view(TextureCube)
+                    self._data = data.view(TextureCube)
 
         else:
             self._data[...] = np.array(data,copy=False).ravel()
@@ -280,16 +334,16 @@ class Attribute(Variable):
 
 
     def set_data(self, data):
-        """ Set data (deferred operation) """
+        """ Assign new data to the variable (deferred operation) """
 
         isnumeric = isinstance(data, (float, int))
 
         # New vertex buffer
-        if isinstance(data, VertexBuffer):
+        if isinstance(data, (VertexBuffer,VertexArray)):
             self._data = data
 
         # We already have a vertex buffer
-        elif isinstance(self._data, VertexBuffer):
+        elif isinstance(self._data, (VertexBuffer,VertexArray)):
             self._data[...] = data
 
         # Data is a tuple with size <= 4, we assume this designates a generate
@@ -326,13 +380,16 @@ class Attribute(Variable):
             offset = ctypes.c_void_p(self.data.offset)
             gl.glEnableVertexAttribArray(self.handle)
             gl.glVertexAttribPointer(self.handle, size, gtype, gl.GL_FALSE, stride, offset)
-
+        elif isinstance(self.data,VertexArray):
+            self.data.activate()
 
     def _deactivate(self):
         if isinstance(self.data,VertexBuffer):
             self.data.deactivate()
             if self.handle > 0:
                 gl.glDisableVertexAttribArray(self.handle)
+        elif isinstance(self.data,VertexArray):
+            self.data.deactivate()
 
 
     def _update(self):
@@ -382,6 +439,7 @@ class Attribute(Variable):
         if self._data is None:
             return 0
         return self._data.size
+
 
     def __len__(self):
         """ Length of the underlying vertex buffer """

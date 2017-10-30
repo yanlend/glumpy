@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 """
 Antigrain Geometry Point Collection
@@ -48,7 +47,7 @@ class AggPointCollection(RawPointCollection):
         if vertex is None:
             vertex = library.get("collections/agg-point.vert")
         if fragment is None:
-            fragment= library.get("collections/agg-point.frag")
+            fragment = library.get("collections/agg-point.frag")
 
         RawPointCollection.__init__(self, user_dtype=user_dtype,
                                     transform=transform, viewport=viewport,

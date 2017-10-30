@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
-__version__ = "2.0"
+__version__ = "1.0.6"
 
 from . import app
 from . import api
@@ -11,6 +10,7 @@ from . import gloo
 from . import data
 from . import transforms
 
+from . log import log
 from . app import run
 from . app import Window
 from . app.window import key

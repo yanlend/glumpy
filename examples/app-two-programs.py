@@ -1,8 +1,6 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (c) 2014, Nicolas P. Rougier
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
+# Distributed under the (new) BSD License.
 # -----------------------------------------------------------------------------
 import numpy as np
 from glumpy import gl, app, gloo
@@ -29,9 +27,9 @@ void main() {
 """
 
 
-program1 = gloo.Program(vertex, fragment1)  # blue on the left
+program1 = gloo.Program(vertex, fragment1)  # blue on the right
 program1['a_position'] = np.zeros((1,2),dtype=np.float32) + 0.5
-program2 = gloo.Program(vertex, fragment2)  # red on the right
+program2 = gloo.Program(vertex, fragment2)  # red on the left
 program2['a_position'] = np.zeros((1,2),dtype=np.float32) - 0.5
 
 

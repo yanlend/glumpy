@@ -1,7 +1,7 @@
-// ----------------------------------------------------------------------------
-// Copyright (c) 2014, Nicolas P. Rougier. All Rights Reserved.
+// -----------------------------------------------------------------------------
+// Copyright (c) 2009-2016 Nicolas P. Rougier. All rights reserved.
 // Distributed under the (new) BSD License.
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 // Uniforms
 // ------------------------------------
@@ -19,6 +19,8 @@ varying vec2  v_texcoord;
 // ------------------------------------
 void main(void)
 {
+    if (v_color.a <= 0.0) discard;
+    
     <viewport.clipping>;
 
     vec2 viewport = <viewport.viewport_global>.zw;
