@@ -385,6 +385,120 @@ class DepthTexture(Texture2D):
         Texture2D.__init__(self)
         self._cpu_format = gl.GL_DEPTH_COMPONENT
         self._gpu_format = gl.GL_DEPTH_COMPONENT
+        
+        
+class Texture3D(Texture):
+    """ 2D texture """
+
+    def __init__(self):
+        Texture.__init__(self, gl.GL_TEXTURE_3D)
+        self.shape = self._check_shape(self.shape, 3)
+        self._cpu_format = Texture._cpu_formats[self.shape[-1]]
+        self._gpu_format = Texture._gpu_formats[self.shape[-1]]
+
+    @property
+    def width(self):
+        """ Texture width """
+
+        return self.shape[2]
+
+
+    @property
+    def height(self):
+        """ Texture height """
+
+        return self.shape[1]
+    
+    @property
+    def depth(self):
+        """ Texture depth """
+        return self.shape[0]
+
+
+    # def _create(self):
+    #     """ Create texture on GPU """
+
+    #     Texture._create(self)
+    #     log.debug("GPU: Resizing texture(%sx%s)"% (self.width,self.height))
+    #     gl.glBindTexture(self.target, self._handle)
+    #     gl.glTexImage2D(self.target, 0, self.format, self.width, self.height,
+    #                     0, self.format, self.gtype, None)
+    #     """
+    #     if self.format == gl.GL_RED:
+    #         gl.glTexImage2D(self.target, 0, gl.GL_R32F, self.width, self.height,
+    #                         0, self.format, self.gtype, None)
+
+    #     elif self.format == gl.GL_RG:
+    #         gl.glTexImage2D(self.target, 0, gl.GL_RG32F, self.width, self.height,
+    #                         0, self.format, self.gtype, None)
+    #     elif self.format == gl.GL_RGB:
+    #         gl.glTexImage2D(self.target, 0, gl.GL_RGB32F, self.width, self.height,
+    #                         0, self.format, self.gtype, None)
+    #     elif self.format == gl.GL_RGBA:
+    #         gl.glTexImage2D(self.target, 0, gl.GL_RGBA32F, self.width, self.height,
+    #                         0, self.format, self.gtype, None)
+    #     """
+
+    def _setup(self):
+        """ Setup texture on GPU """
+
+        Texture._setup(self)
+        gl.glBindTexture(self.target, self._handle)
+        gl.glTexImage3D(self.target, 0, self._gpu_format,
+                        self.width, self.height, self.depth,
+                        0, self._cpu_format, self.gtype, None)
+        self._need_setup = False
+
+
+    def _update(self):
+        """ Update texture on GPU """
+
+        if self.pending_data:
+            log.debug("GPU: Updating texture")
+
+            start, stop = self.pending_data
+            offset, nbytes = start, stop-start
+
+            itemsize = self.strides[2]
+            offset /= itemsize
+            nbytes /= itemsize
+
+            nbytes += offset % self.width
+            offset -= offset % self.width
+            nbytes += (self.width - ((offset + nbytes) % self.width)) % self.width
+            
+#             # 2d code
+#             x = 0
+#             y = offset // self.width
+#             width = self.width
+#             height = nbytes // self.width
+            
+            x = offset % self.width
+            y = (offset // self.width) % self.height
+            z = offset // (self.width * self.height)
+            width = self.width
+            height = self.height
+            depth = nbytes // (self.width * self.height)
+
+            if x != 0 or y != 0 or z != 0 or depth != self.depth:
+                raise NotImplementedError("Can only transfer whole textures.")
+            gl.glBindTexture(self._target, self.handle)
+            gl.glTexSubImage3D(self.target, 0,
+                               x, y, z,
+                               width, height, depth,
+                               self._cpu_format, self.gtype, self)
+            gl.glBindTexture(self._target, self.handle)
+
+        self._pending_data = None
+        self._need_update = False
+
+
+class TextureFloat3D(Texture3D):
+    """ 3D float texture """
+
+    def __init__(self):
+        Texture3D.__init__(self)
+        self._gpu_format = Texture._gpu_float_formats[self.shape[-1]]
 
 
 

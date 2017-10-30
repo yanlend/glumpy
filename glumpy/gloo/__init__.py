@@ -11,8 +11,8 @@ from . variable import Variable, Attribute, Uniform
 from . uniforms import Uniforms
 from . texture import Texture
 from . texture import TextureCube
-from . texture import Texture1D, Texture2D
-from . texture import TextureFloat1D, TextureFloat2D
+from . texture import Texture1D, Texture2D, Texture3D
+from . texture import TextureFloat1D, TextureFloat2D, TextureFloat3D
 from . texture import DepthTexture
 from . array import VertexArray
 from . buffer import Buffer
