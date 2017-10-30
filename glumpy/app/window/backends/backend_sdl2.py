@@ -20,15 +20,15 @@ rely on C code, but uses ctypes instead.
 **Capability**
 
 ========================== ======== ======================== ========
-Multiple windows              ✓     Set GL API                  ✓
+Multiple windows              xxx     Set GL API                  xxx
 -------------------------- -------- ------------------------ --------
-Non-decorated windows         ✓     Set GL Profile              ✓
+Non-decorated windows         xxx     Set GL Profile              xxx
 -------------------------- -------- ------------------------ --------
-Resize windows                ✓     Share GL Context            ✓
+Resize windows                xxx     Share GL Context            xxx
 -------------------------- -------- ------------------------ --------
-Move windows                  ✓     Unicode handling            ✓
+Move windows                  xxx     Unicode handling            xxx
 -------------------------- -------- ------------------------ --------
-Fullscreen                    ✓     Scroll event                ✓
+Fullscreen                    xxx     Scroll event                xxx
 ========================== ======== ======================== ========
 """
 import sys, ctypes
